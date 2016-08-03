@@ -1,4 +1,7 @@
 # run it remotely with ruby -e "$(curl -fsSL https://raw.github.com/bookingexperts/ops-scripts/master/deploy/elastic_beanstalk.rb)"
+#
+# Credits to SemaphoreCI.
+# We took inspiration from their beanstalk deploy script.
 
 require 'date'
 
@@ -50,9 +53,9 @@ puts "Create new application version: #{@version_name}"
 @failed_deploys = []
 @threads = []
 
-@eb_env_names.split(' ').each do |eb_env_name|
+@eb_env_names.split(' ').each_with_index do |eb_env_name, eb_env_index|
 
-  @threads << Thread.new do
+  thread = Thread.new do
     puts "#{eb_env_name}: Start update"
     `aws elasticbeanstalk update-environment --environment-name #{eb_env_name} --version-label #{@version_name}`
 
@@ -93,12 +96,20 @@ puts "Create new application version: #{@version_name}"
       puts "#{eb_env_name}: Your environment status is not healthy, sorry."
       puts `#{env_describe_cmd}`.strip
     end
+  end
 
+  if eb_env_index == 0
+    # Let's wait for the first environment to complete.
+    # The first environment should be the one that runs database migrations etc.
+    # You don't want the other environments to be completed before the migrations are completed.
+    thread.join
+  else
+    @threads << thread
   end
 
 end
 
-# Wait for all the threads to finish
+# Wait for the other threads to finish
 @threads.each {|tr| tr.join }
 
 if @failed_deploys.empty?
