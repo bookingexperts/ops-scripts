@@ -4,7 +4,14 @@ require 'date'
 
 # Deploy to AWS ElasticBeanstalk, http://aws.amazon.com/elasticbeanstalk/
 
-# Configuration
+# Environment variables configuration
+
+# AWS_DEFAULT_REGION    - for example eu-central-1
+# AWS_SECRET_ACCESS_KEY - aws secret key, should have elastic beanstalk rights
+# AWS_ACCESS_KEY_ID     - aws access key
+# S3_BUCKET_NAME        - bucket to store the zipped code
+# EB_ENV_NAMES          - one or more environments delimited by a white space, for example 'staging-app staging-worker'
+# EB_APP_NAME           - name of the application
 
 %w(
   aws_default_region
