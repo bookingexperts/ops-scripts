@@ -36,7 +36,7 @@ end
   `git rev-parse --short HEAD`.strip,
   DateTime.now.strftime('%Y-%m-%d_%H_%M_%S')
 ].join('_')
-@version_desc = `git show -s --format=%s HEAD`.strip
+@version_desc = `git show -s --format=%s HEAD`.strip.gsub('"', "'")
 @version_file_name = "#{@version_name}.zip"
 @s3_key = "#{@eb_app_name}/#{@version_file_name}"
 
