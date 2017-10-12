@@ -9,7 +9,12 @@ discovery.ec2.availability_zones: eu-central-1a, eu-central-1b
 cloud.aws.region: eu-central-1
 cloud.node.auto_attributes: true
 cluster.routing.allocation.awareness.attributes: aws_availability_zone
+
+xpack.graph.enabled: false
+xpack.ml.enabled: false
+xpack.monitoring.enabled: false
 xpack.security.enabled: false
+xpack.watcher.enabled: false
 
 script.inline: true
 script.stored: true
