@@ -1,0 +1,5 @@
+server {
+    server_name DOMAIN;
+    return 301 https://www.$host$request_uri;
+}
+
