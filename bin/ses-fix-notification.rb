@@ -7,6 +7,7 @@ def main
   sns_topic_arn = 'arn:aws:sns:eu-west-1:762732311162:be-prod-email'
 
   ses.list_identities(max_items: 1000).identities.each do |identity|
+    sleep 1
 
     notifications = get_notification_settings(identity)
     if  notifications.bounce_topic == sns_topic_arn &&
@@ -14,7 +15,6 @@ def main
       puts "SNS topics already set for #{identity}"
     else
       puts "Setting SNS topics for #{identity}..."
-
 
       %w(Bounce Complaint).each do |type|
         ses.set_identity_notification_topic({
