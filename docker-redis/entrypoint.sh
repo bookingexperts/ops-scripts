@@ -1,6 +1,6 @@
 #!/bin/sh
 function set_master {
-  master="$(redis-cli -h internal-ecs-sentinels-1037638384.eu-central-1.elb.amazonaws.com -p 26379 sentinel get-master-addr-by-name queue-master || echo 'Connection refused')"
+  master="$(redis-cli -h sentinel.ecs.be.internal -p 26379 sentinel get-master-addr-by-name queue-master || echo 'Connection refused')"
   master=$(echo "$master" | tr '\n' ' ')
 }
 
