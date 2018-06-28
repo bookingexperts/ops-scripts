@@ -1,0 +1,19 @@
+user              nginx;
+worker_processes  1;
+pid               /var/run/nginx.pid;
+
+events {}
+
+http {
+    include                     /etc/nginx/mime.types;
+    default_type                application/octet-stream;
+
+    access_log                  /dev/stdout;
+    error_log                   /dev/stderr warn;
+
+    # Disable leaking server information
+    server_tokens               off;
+    ignore_invalid_headers      on;
+
+    include /mnt/nginx/*.conf;
+}

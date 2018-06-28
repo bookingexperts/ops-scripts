@@ -1,0 +1,111 @@
+#!/bin/sh
+admin_email='admin@bookingexperts.nl'
+webroot='/usr/share/nginx/html'
+
+function main() {
+  case $1 in
+    renew|'')
+      renew
+      ;;
+    setup)
+      setup
+      ;;
+    add)
+      shift
+      add "${@}"
+      ;;
+    help|*)
+      usage
+      ;;
+  esac
+}
+
+function usage() {
+  echo "Usage: $0 [renew|setup]"
+  echo "       $0 add domain1 domain2 ..."
+  echo "Default command: renew"
+}
+
+function setup() {
+  mkdir -p /mnt/nginx /mnt/letsencrypt
+  if confirm "(Re)generate DH params?"; then
+    apk add --update --upgrade --no-cache openssl
+    openssl dhparam -out /mnt/nginx/dhparams.pem 2048
+    apk del openssl
+  fi
+  if confirm "Register new LetsEncrypt account?"; then
+    certbot register --agree-tos --no-eff-email -m $admin_email
+  fi
+  # Configure default vhosts
+}
+
+function renew() {
+  certbot renew --post-hook="touch /mnt/nginx/updated"
+}
+
+
+function add() {
+  certname=$1
+
+  # Expand with naked domains
+  for domain in $@; do
+    case $domain in
+      www.*)
+        naked_domain=$(echo $domain | sed -e 's/www\.//g')
+        naked_domains="${naked_domains},${naked_domain}"
+        ;;
+    esac
+    domains="${domains},${domain}"
+  done
+
+  request_certificate $(strip_commas "${domains}${naked_domains}") \
+  && generate_nginx_config $certname $(strip_commas "${domains}") $(strip_commas "${naked_domains}") \
+  && validate_config \
+  && touch /mnt/nginx/updated \
+  || echo "ERROR: Failed to add domains for ${certname}"
+}
+
+
+function request_certificate() {
+  certbot --webroot --webroot-path $webroot --non-interactive --expand --keep-until-expiring --domains $1
+}
+
+function generate_nginx_config() {
+  certname=$1
+  domains=$(echo "$2" | sed -e 's/,/ /g')
+  naked_domains=$(echo "$3" | sed -e 's/,/ /g')
+  config_file="/mnt/nginx/${certname}.conf"
+
+  echo $domains
+  echo $naked_domains
+
+  eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > $config_file
+  if [ "${naked_domains}" != '' ]; then
+    eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\"" >> $config_file
+  fi
+}
+
+function validate_config() {
+  nginx -t -c /etc/nginx/nginx.test-conf
+}
+
+function confirm() {
+  echo -n "$@ "
+  read answer
+  for response in y Y yes YES Yes Sure sure SURE OK ok Ok
+  do
+    if [ "_$answer" == "_$response" ]
+    then
+      return 0
+    fi
+  done
+
+  # Any answer other than the list above is considerred a "no" answer
+  return 1
+}
+
+strip_commas() {
+ echo $1 | sed -e 's/^,*//g' | sed -e 's/,*$//g'
+}
+
+main "$@"

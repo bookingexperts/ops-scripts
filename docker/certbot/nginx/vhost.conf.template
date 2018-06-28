@@ -1,0 +1,13 @@
+server {
+  listen 443 ssl;
+  server_name ${domains};
+
+  ssl_certificate /etc/letsencrypt/live/${certname}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${certname}/privkey.pem;
+  ssl_trusted_certificate /etc/letsencrypt/live/${certname}/chain.pem;
+
+  location / {
+    proxy_pass http://app-alb.be.internal;
+  }
+}
+

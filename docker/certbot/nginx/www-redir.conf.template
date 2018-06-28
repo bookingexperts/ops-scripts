@@ -1,0 +1,10 @@
+server {
+  listen 443 ssl;
+  server_name ${naked_domains};
+
+  ssl_certificate /etc/letsencrypt/live/${certname}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${certname}/privkey.pem;
+  ssl_trusted_certificate /etc/letsencrypt/live/${certname}/chain.pem;
+
+  return 301 https://www.\$host\$request_uri;
+}
