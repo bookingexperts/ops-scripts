@@ -37,12 +37,12 @@ function setup() {
     apk del openssl
   fi
   if confirm "Register new LetsEncrypt account?"; then
-    certbot register --agree-tos --no-eff-email -m $admin_email
+    certbot register --staging --agree-tos --no-eff-email -m $admin_email
   fi
 }
 
 function renew() {
-  certbot renew --post-hook="touch ${nginx_dir}/updated"
+  certbot renew --staging --post-hook="touch ${nginx_dir}/updated"
 }
 
 
@@ -68,7 +68,7 @@ function add() {
 }
 
 function request_certificate() {
-  certbot --webroot --webroot-path $webroot --non-interactive --expand --keep-until-expiring --domains $1
+  certbot certonly --staging --webroot --webroot-path $webroot --non-interactive --expand --keep-until-expiring --domains $1
 }
 
 function generate_nginx_config() {
