@@ -1,6 +1,8 @@
 #!/bin/sh
 admin_email='admin@bookingexperts.nl'
 webroot='/usr/share/nginx/html'
+nginx_dir=/mnt/nginx
+le_dir=/mnt/letsencrypt
 
 function main() {
   case $1 in
@@ -27,20 +29,20 @@ function usage() {
 }
 
 function setup() {
-  mkdir -p /mnt/nginx /mnt/letsencrypt
+  echo "Creating directories..."
+  mkdir -p $nginx_dir $le_dir
   if confirm "(Re)generate DH params?"; then
     apk add --update --upgrade --no-cache openssl
-    openssl dhparam -out /mnt/nginx/dhparams.pem 2048
+    openssl dhparam -out ${nginx_dir}/dhparams.pem 2048
     apk del openssl
   fi
   if confirm "Register new LetsEncrypt account?"; then
     certbot register --agree-tos --no-eff-email -m $admin_email
   fi
-  # Configure default vhosts
 }
 
 function renew() {
-  certbot renew --post-hook="touch /mnt/nginx/updated"
+  certbot renew --post-hook="touch ${nginx_dir}/updated"
 }
 
 
@@ -61,10 +63,9 @@ function add() {
   request_certificate $(strip_commas "${domains}${naked_domains}") \
   && generate_nginx_config $certname $(strip_commas "${domains}") $(strip_commas "${naked_domains}") \
   && validate_config \
-  && touch /mnt/nginx/updated \
-  || echo "ERROR: Failed to add domains for ${certname}"
+  && touch ${nginx_dir}/updated \
+  || die "ERROR: Failed to add domains for ${certname}"
 }
-
 
 function request_certificate() {
   certbot --webroot --webroot-path $webroot --non-interactive --expand --keep-until-expiring --domains $1
@@ -74,7 +75,7 @@ function generate_nginx_config() {
   certname=$1
   domains=$(echo "$2" | sed -e 's/,/ /g')
   naked_domains=$(echo "$3" | sed -e 's/,/ /g')
-  config_file="/mnt/nginx/${certname}.conf"
+  config_file="${nginx_dir}/${certname}.conf"
 
   echo $domains
   echo $naked_domains
@@ -108,4 +109,8 @@ strip_commas() {
  echo $1 | sed -e 's/^,*//g' | sed -e 's/,*$//g'
 }
 
+function die() {
+  echo $1
+  exit 1
+}
 main "$@"
