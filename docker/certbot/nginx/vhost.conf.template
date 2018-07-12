@@ -7,7 +7,7 @@ server {
   ssl_trusted_certificate /etc/letsencrypt/live/${certname}/chain.pem;
 
   location / {
-    proxy_pass http://app-alb.be.internal;
+    proxy_pass http://lb.ecs.be.internal;
   }
 }
 

@@ -9,4 +9,3 @@ COPY nginx/* /etc/nginx/
 COPY bin/*   /usr/local/bin/
 
 ENTRYPOINT /usr/local/bin/docker-entrypoint.sh
-
