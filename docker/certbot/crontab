@@ -1,0 +1,1 @@
+42 6 * * * /usr/local/bin/be-certbot renew

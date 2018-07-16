@@ -1,5 +1,5 @@
 server {
-  listen 443 ssl;
+  listen 443 ssl proxy_protocol http2;
   server_name ${domains};
 
   ssl_certificate /etc/letsencrypt/live/${certname}/fullchain.pem;

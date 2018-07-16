@@ -7,5 +7,8 @@ RUN set -ex \
 
 COPY nginx/* /etc/nginx/
 COPY bin/*   /usr/local/bin/
+ADD  crontab /etc/cron.d/renew
+
+RUN chmod 0644 /etc/cron.d/renew
 
 ENTRYPOINT /usr/local/bin/docker-entrypoint.sh
