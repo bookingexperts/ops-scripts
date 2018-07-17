@@ -60,6 +60,7 @@ function add() {
     && generate_nginx_config $domain "${naked_domain}" \
     && validate_config \
     && touch ${nginx_dir}/updated \
+    && sleep 5 \
     || die "ERROR: Failed to add domain for ${domain}"
   fi
 }
@@ -69,8 +70,8 @@ function request_certificate() {
 }
 
 function generate_nginx_config() {
-  domain=$2
-  naked_domain=$3
+  domain=$1
+  naked_domain=$2
   config_file="${nginx_dir}/${domain}.conf"
 
   eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > $config_file
