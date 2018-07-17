@@ -1,0 +1,24 @@
+version: '3'
+services:
+  proxy:
+    image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/proxy
+    build: ./proxy
+    ports:
+      - "8080:80"
+      - "4433:443"
+    volumes:
+      - certdata:/mnt
+    links:
+      - certbot
+  certbot:
+    image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/certbot
+    build: ./certbot
+    expose:
+      - "80"
+    volumes:
+      - certdata:/mnt
+  app-base:
+    image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/app-base
+    build: ./app-base
+volumes:
+  certdata:
