@@ -13,8 +13,7 @@ function main() {
       setup
       ;;
     add)
-      shift
-      add "${@}"
+      add $2
       ;;
     help|*)
       usage
@@ -24,7 +23,7 @@ function main() {
 
 function usage() {
   echo "Usage: $0 [renew|setup]"
-  echo "       $0 add domain1 domain2 ..."
+  echo "       $0 add domain"
   echo "Default command: renew"
 }
 
@@ -47,24 +46,22 @@ function renew() {
 
 
 function add() {
-  certname=$1
+  domain=$1
+  config_file="${nginx_dir}/${domain}.conf"
 
-  # Expand with naked domains
-  for domain in $@; do
+  if [ ! -f $config_file ]; then
     case $domain in
       www.*)
         naked_domain=$(echo $domain | sed -e 's/www\.//g')
-        naked_domains="${naked_domains},${naked_domain}"
         ;;
     esac
-    domains="${domains},${domain}"
-  done
 
-  request_certificate $(strip_commas "${domains}${naked_domains}") \
-  && generate_nginx_config $certname $(strip_commas "${domains}") $(strip_commas "${naked_domains}") \
-  && validate_config \
-  && touch ${nginx_dir}/updated \
-  || die "ERROR: Failed to add domains for ${certname}"
+    request_certificate $(strip_commas "${domain},${naked_domain}") \
+    && generate_nginx_config $domain "${naked_domain}" \
+    && validate_config \
+    && touch ${nginx_dir}/updated \
+    || die "ERROR: Failed to add domain for ${domain}"
+  fi
 }
 
 function request_certificate() {
@@ -72,16 +69,12 @@ function request_certificate() {
 }
 
 function generate_nginx_config() {
-  certname=$1
-  domains=$(echo "$2" | sed -e 's/,/ /g')
-  naked_domains=$(echo "$3" | sed -e 's/,/ /g')
-  config_file="${nginx_dir}/${certname}.conf"
-
-  echo $domains
-  echo $naked_domains
+  domain=$2
+  naked_domain=$3
+  config_file="${nginx_dir}/${domain}.conf"
 
   eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > $config_file
-  if [ "${naked_domains}" != '' ]; then
+  if [ "${naked_domain}" != '' ]; then
     eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\"" >> $config_file
   fi
 }
