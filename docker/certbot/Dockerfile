@@ -10,8 +10,8 @@ RUN set -ex \
  && rm -rf /etc/letsencrypt              \
  && ln -nsf /mnt/letsencrypt /etc/letsencrypt
 
-COPY nginx/* /etc/nginx/
-COPY bin/*   /usr/local/bin/
+COPY nginx   /etc/nginx/
+COPY bin     /usr/local/bin/
 ADD  crontab /etc/periodic/daily/renew
 
 RUN chmod 0644 /etc/periodic/daily/renew

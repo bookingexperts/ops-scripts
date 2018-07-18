@@ -13,5 +13,7 @@ server {
   location / {
     proxy_pass http://lb.ecs.be.internal;
   }
+
+  include /etc/nginx/error_pages.conf;
 }
 

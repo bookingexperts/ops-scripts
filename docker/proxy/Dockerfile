@@ -8,8 +8,9 @@ RUN set -ex \
  && ln -nsf /mnt/nginx /etc/nginx/conf.d        \
  && ln -nsf /mnt/letsencrypt /etc/letsencrypt
 
-COPY nginx.conf    /etc/nginx/
+COPY nginx         /etc/nginx/
 COPY entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 443
 ENTRYPOINT /usr/local/bin/docker-entrypoint.sh
 
