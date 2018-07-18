@@ -4,7 +4,7 @@ webroot='/usr/share/nginx/html'
 nginx_dir=/mnt/nginx
 le_dir=/mnt/letsencrypt
 
-if [ $STAGING == "true" ]; then
+if [ ! -z ${STAGING} ]; then
   staging="--staging"
 fi
 
