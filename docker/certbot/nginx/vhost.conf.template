@@ -11,6 +11,7 @@ server {
   # ssl_ciphers   EECDH+AEAD:EDH+AEAD:EECDH+AES256:EDH+AES256;
 
   location / {
+    access_log /dev/stdout upstreamlog;
     proxy_pass http://lb.ecs.be.internal;
   }
 

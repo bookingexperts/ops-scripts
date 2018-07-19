@@ -35,9 +35,7 @@ function setup() {
   echo "Creating directories..."
   mkdir -p $nginx_dir $le_dir
   if confirm "(Re)generate DH params?"; then
-    apk add --update --upgrade --no-cache openssl
     openssl dhparam -out ${nginx_dir}/dhparams.pem 2048
-    apk del openssl
   fi
   if confirm "Register new LetsEncrypt account?"; then
     certbot register ${staging} --agree-tos --no-eff-email -m $admin_email
