@@ -5,15 +5,16 @@ pid               /var/run/nginx.pid;
 events {}
 
 http {
-    include                     /etc/nginx/mime.types;
-    default_type                application/octet-stream;
+    include                /etc/nginx/mime.types;
+    default_type           application/octet-stream;
 
-    access_log                  /dev/stdout;
-    error_log                   /dev/stderr warn;
+    log_format             upstreamlog '[$time_local] $remote_addr - $remote_user - $server_name to: $upstream_addr: $request upstream_response_time $upstream_response_time request_time $request_time';
+    access_log             /dev/stdout;
+    error_log              /dev/stderr warn;
 
     # Disable leaking server information
-    server_tokens               off;
-    ignore_invalid_headers      on;
+    server_tokens          off;
+    ignore_invalid_headers on;
 
     include /mnt/nginx/*.conf;
 }
