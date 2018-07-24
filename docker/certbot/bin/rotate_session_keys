@@ -3,3 +3,4 @@ nginx_dir=/mnt/nginx
 
 cp ${nginx_dir}/current.key ${nginx_dir}/previous.key
 openssl rand 80 > ${nginx_dir}/current.key
+touch ${nginx_dir}/updated
