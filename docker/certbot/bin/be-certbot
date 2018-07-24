@@ -46,7 +46,6 @@ function renew() {
   certbot renew ${staging} --post-hook="touch ${nginx_dir}/updated"
 }
 
-
 function add() {
   domain=$1
   config_file="${nginx_dir}/${domain}.conf"
