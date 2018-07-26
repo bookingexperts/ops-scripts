@@ -57,13 +57,17 @@ function add() {
         ;;
     esac
 
-    request_certificate $(strip_commas "${domain},${naked_domain}") \
-    && generate_nginx_config $domain "${naked_domain}" \
-    && validate_config \
-    && touch ${nginx_dir}/updated \
-    && sleep 5 \
-    || die "ERROR: Failed to add domain for ${domain}"
+       check_dns $domain "${naked_domain}"                              || die "DNS check failed" 12 \
+    && request_certificate $(strip_commas "${domain},${naked_domain}")  || die "Request certificate failed" \
+    && generate_nginx_config $domain "${naked_domain}"                  || die "Generating vhost config failed" \
+    && validate_config                                                  || die "Nginx config invalid" 9 \
+    && touch ${nginx_dir}/updated
+    sleep 5
   fi
+}
+
+function check_dns() {
+  dig $1 +short | grep -q lb.bookingexperts.nl && [ -z $2 ] || [ "$(dig $2 +short)" = '52.58.34.119' ]
 }
 
 function request_certificate() {
@@ -105,7 +109,12 @@ strip_commas() {
 }
 
 function die() {
-  echo $1
-  exit 1
+  echo "ERROR: ${1}"
+  if [ ! -z "$2" ]; then
+    exitcode=$2
+  else
+    exitcode=1
+  fi
+  exit $exitcode
 }
 main "$@"

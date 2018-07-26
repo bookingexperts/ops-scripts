@@ -7,7 +7,7 @@ RUN set -ex \
     nginx-mod-http-lua nginx \
  && apk add --update --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community \
     certbot  \
- && apk add --no-cache --update openssl curl \
+ && apk add --no-cache --update openssl curl bind-tools \
  && mkdir -p /usr/share/nginx/html       \
  && rm -rf /etc/letsencrypt              \
  && ln -nsf /mnt/letsencrypt /etc/letsencrypt
