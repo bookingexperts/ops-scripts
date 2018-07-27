@@ -21,8 +21,8 @@ RUN set -ex \
     libsodium \
     nginx \
     postgresql-client \
-    ruby \
     ruby-bundler \
+    ruby-full \
     tzdata \
     yaml
 
