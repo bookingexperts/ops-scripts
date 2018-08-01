@@ -3,6 +3,7 @@ admin_email='admin@bookingexperts.nl'
 webroot='/usr/share/nginx/html'
 nginx_dir=/mnt/nginx
 le_dir=/mnt/letsencrypt
+redirector_ip='52.58.34.119'
 
 if [ ! -z ${STAGING} ]; then
   staging="--staging"
@@ -62,12 +63,17 @@ function add() {
     && generate_nginx_config $domain "${naked_domain}"                  || die "Generating vhost config failed" \
     && validate_config                                                  || die "Nginx config invalid" 9 \
     && touch ${nginx_dir}/updated
-    sleep 5
   fi
 }
 
 function check_dns() {
-  dig $1 +short | grep -q lb.bookingexperts.nl && [ -z $2 ] || [ "$(dig $2 +short)" = '52.58.34.119' ]
+  domain=$1
+  naked=$2
+  if [ -z $naked ]; then
+    dig $domain +short | grep -q lb.bookingexperts.nl || [ "$(dig $domain +short)" = $redirector_ip ]
+  else
+    dig $domain +short | grep -q lb.bookingexperts.nl && [ "$(dig $naked  +short)" = $redirector_ip ]
+  fi
 }
 
 function request_certificate() {
