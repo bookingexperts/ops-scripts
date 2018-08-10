@@ -1,0 +1,4 @@
+#!/bin/sh
+timestamp=$(date +%s)
+tar -czf /mnt/backups/nginx-${timestamp}.tar.gz /mnt/nginx
+tar -czf /mnt/backups/letsencrypt-${timestamp}.tar.gz /mnt/letsencrypt
