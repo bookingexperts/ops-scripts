@@ -4,6 +4,11 @@ function set_master {
   master=$(echo "$master" | tr '\n' ' ')
 }
 
+function deregister {
+  # if master -> failover
+  # reset sentinels
+}
+
 mode=$1
 shift
 case $mode in

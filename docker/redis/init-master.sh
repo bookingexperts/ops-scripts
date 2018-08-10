@@ -1,3 +1,5 @@
 #!/bin/sh
-instances=$(aws --output text ecs list-container-instances --cluster ecs-test | awk '{print $2}' | tr '\n' ' ')
-instance_ids=$(aws --output text ecs describe-container-instances --container-instances  --cluster ecs-test --query 'containerInstances[*].[ec2InstanceId]')
+cluster="be-ecs-cluster"
+instances=$(aws --output text ecs list-container-instances --cluster $cluster | awk '{print $2}' | tr '\n' ' ')
+instance_ids=$(aws --output text ecs describe-container-instances --container-instances $instances --cluster $cluster --query 'containerInstances[*].[ec2InstanceId]')
+echo $instance_ids
