@@ -18,7 +18,14 @@ function main() {
       setup
       ;;
     add)
-      add $2
+      case $2 in
+        \*.*)
+          add_wildcard $2
+          ;;
+        *)
+          add $2
+          ;;
+      esac
       ;;
     help|*)
       usage
@@ -29,6 +36,7 @@ function main() {
 function usage() {
   echo "Usage: $0 [renew|setup]"
   echo "       $0 add domain"
+  echo "       $0 add wildcard"
   echo "Default command: renew"
 }
 
@@ -66,6 +74,23 @@ function add() {
   fi
 }
 
+function add_wildcard() {
+  domain=$1
+  naked_domain=$(echo $domain | sed -e 's/*\.//g')
+  config_file="${nginx_dir}/${domain}.conf"
+
+  if confirm "Request certificate for $domain and ${naked_domain}?"; then
+    request_certificate "${domain},${naked_domain}" --dns
+  fi
+
+  if confirm "Rewrite config?"; then
+    domain=".${naked_domain}"
+    name=$naked_domain
+    eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > "${nginx_dir}/${name}.conf"
+    validate_config && touch ${nginx_dir}/updated
+  fi
+}
+
 function check_dns() {
   domain=$1
   naked=$2
@@ -77,11 +102,17 @@ function check_dns() {
 }
 
 function request_certificate() {
-  certbot certonly ${staging} --webroot --webroot-path $webroot --rsa-key-size 4096 --non-interactive --expand --keep-until-expiring --domains $1
+  if [ $2 == "--dns" ]; then
+    validation_options="--dns-route53"
+  else
+    validation_options="--webroot --webroot-path $webroot"
+  fi
+  certbot certonly ${staging} ${validation_options} --rsa-key-size 4096 --non-interactive --expand --keep-until-expiring --domains $1
 }
 
 function generate_nginx_config() {
   domain=$1
+  name=$domain
   naked_domain=$2
   config_file="${nginx_dir}/${domain}.conf"
 

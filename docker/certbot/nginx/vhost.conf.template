@@ -2,9 +2,9 @@ server {
   listen 443 ssl proxy_protocol http2;
   server_name ${domain};
 
-  ssl_certificate /etc/letsencrypt/live/${domain}/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/${domain}/privkey.pem;
-  ssl_trusted_certificate /etc/letsencrypt/live/${domain}/chain.pem;
+  ssl_certificate /etc/letsencrypt/live/${name}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${name}/privkey.pem;
+  ssl_trusted_certificate /etc/letsencrypt/live/${name}/chain.pem;
 
   # Legacy TLS support - uncomment to enable TLSv1.1
   # ssl_protocols TLSv1.2 TLSv1.1;
