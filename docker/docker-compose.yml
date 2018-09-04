@@ -22,7 +22,7 @@ services:
     build: ./app-base
   sentinel:
     image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/sentinel
-    build: ./redis
+    build: ./sentinel
 volumes:
   certdata:
   elastic:

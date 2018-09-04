@@ -27,6 +27,12 @@ function main() {
           ;;
       esac
       ;;
+    validate|validate-nginx)
+      validate_config
+      ;;
+    reload|reload-nginx)
+      validate_config && touch ${nginx_dir}/updated
+      ;;
     help|*)
       usage
       ;;
@@ -37,6 +43,8 @@ function usage() {
   echo "Usage: $0 [renew|setup]"
   echo "       $0 add domain"
   echo "       $0 add wildcard"
+  echo "       $0 validate[-nginx]"
+  echo "       $0 reload[-nginx]"
   echo "Default command: renew"
 }
 
