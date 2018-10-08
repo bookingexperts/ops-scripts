@@ -103,9 +103,9 @@ function check_dns() {
   domain=$1
   naked=$2
   if [ -z $naked ]; then
-    dig $domain +short | grep -q lb.bookingexperts.nl || [ "$(dig $domain +short)" = $redirector_ip ]
+    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' || [ "$(dig $domain +short)" = $redirector_ip ]
   else
-    dig $domain +short | grep -q lb.bookingexperts.nl && [ "$(dig $naked  +short)" = $redirector_ip ]
+    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' && [ "$(dig $naked  +short)" = $redirector_ip ]
   fi
 }
 
