@@ -19,12 +19,14 @@ RUN set -ex \
  && apk add --update --upgrade --no-cache --virtual .run-deps \
     dumb-init \
     file \
+    git \
     imagemagick \
     less \
     libpq \
     libstdc++ \
     libsodium \
     nginx \
+    nodejs \
     postgresql-client \
     ruby-bundler \
     ruby-full \
@@ -35,7 +37,8 @@ ARG revision
 
 COPY nginx.conf /etc/nginx/
 
-RUN mkdir -p tmp config \
- && cd config \
- && ln -s database.deploy.yml database.yml \
+RUN set -ex \
+ && mkdir -p tmp config public /mnt/shared/assets \
+ && ln -s database.deploy.yml config/database.yml \
+ && ln -s /mnt/shared/assets  public/assets \
  && cp /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
