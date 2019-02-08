@@ -1,0 +1,19 @@
+#!/bin/sh
+
+case $1 in
+  ecs)
+    asg=EC2ContainerService-be-ecs-cluster-EcsInstanceAsg-12A1SMUHOBMHM
+    ;;
+  es|elastic)
+    asg=ElasticSearch
+    ;;
+  red|redis)
+    asg=Redis
+    ;;
+  *)
+    asg=$1
+esac
+
+aws ec2 describe-instances --output text \
+  --filters "Name=tag:aws:autoscaling:groupName,Values=${asg}" "Name=instance-state-name,Values=running" \
+  --query 'Reservations[*].Instances[*].[PrivateDnsName]'

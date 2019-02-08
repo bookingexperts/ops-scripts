@@ -7,7 +7,7 @@ services:
       - "8080:80"
       - "4433:443"
     volumes:
-      - certdata:/mnt
+      - /tmp:/mnt
     links:
       - certbot
   certbot:

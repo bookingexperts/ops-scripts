@@ -1,0 +1,86 @@
+#!/bin/bash
+
+asg=EC2ContainerService-be-ecs-cluster-EcsInstanceAsg-12A1SMUHOBMHM
+
+main() {
+  for instance in $(ec2instances); do
+    detach $instance && \
+    drain $instance && \
+    terminate $instance
+  done
+}
+
+ec2instances() {
+  aws ec2 describe-instances --output text \
+    --filters "Name=tag:aws:autoscaling:groupName,Values=${asg}" "Name=instance-state-name,Values=running" \
+    --query 'Reservations[*].Instances[*].[InstanceId]'
+  }
+
+detach() {
+  if confirm "Detach & replace ${instance}?"; then
+    aws autoscaling detach-instances \
+      --instance-ids ${1} \
+      --auto-scaling-group-name ${asg} \
+      --no-should-decrement-desired-capacity > /dev/null
+  else
+    false
+  fi
+}
+
+drain() {
+  if confirm "Drain ${instance}?"; then
+    echo -n "Draining ${instance}."
+    aws ecs update-container-instances-state \
+      --cluster be-ecs-cluster \
+      --container-instances $(container_instance_arn ${instance}) \
+      --status 'DRAINING' > /dev/null
+
+    tasks_running=1
+    while [ $tasks_running -gt 0 ]; do
+      tasks_running=$(running_task_count $instance)
+      printf "\rDraining ${instance}. ${tasks_running} tasks remaining...\r"
+      sleep 10
+    done
+    echo "\a"
+  else
+    false
+  fi
+}
+
+terminate() {
+  if confirm "Terminate ${instance}?"; then
+    aws ec2 terminate-instances \
+      --instance-ids ${1} > /dev/null
+  fi
+}
+
+running_task_count() {
+  aws ecs describe-container-instances --output text \
+    --cluster be-ecs-cluster \
+    --container-instances $(container_instance_arn ${1}) \
+    --query 'containerInstances[*].runningTasksCount'
+  }
+
+container_instance_arn() {
+  aws ecs list-container-instances --output text \
+    --cluster be-ecs-cluster \
+    --filter "ec2InstanceId == ${1}" \
+    --query 'containerInstanceArns[*]'
+  }
+
+function confirm() {
+  echo -n "$@ "
+  read answer
+  for response in y Y yes YES Yes Sure sure SURE OK ok Ok
+  do
+    if [ "_$answer" == "_$response" ]
+    then
+      return 0
+    fi
+  done
+
+  # Any answer other than the list above is considerred a "no" answer
+  return 1
+}
+
+main
