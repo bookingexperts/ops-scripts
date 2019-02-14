@@ -4,6 +4,33 @@ source "$(dirname $(readlink $0))/aws-helpers.sh"
 asg=EC2ContainerService-be-ecs-cluster-EcsInstanceAsg-12A1SMUHOBMHM
 
 main() {
+  case $1 in
+    --non-interactive)
+      confirm() {
+        true
+      }
+      update_cluster
+      ;;
+    --help|-h)
+      usage
+      ;;
+    *)
+      update_cluster
+      ;;
+  esac
+}
+
+usage() {
+  echo "Usage:"
+  echo "  $0 [options]"
+  echo
+  echo "Options:"
+  echo "  --non-interactive # Don't ask confirmation of updates."
+  echo "                    # Automatically roll over entire cluster."
+  echo "  --help, -h        # Display this help message."
+}
+
+update_cluster() {
   for instance in $(asg_running_instance_ids $asg); do
     detach_and_replace $instance $asg "Detach, replace & drain ${instance}?" && drain $instance \
       && terminate $instance
@@ -39,4 +66,4 @@ container_instance_arn() {
     --query 'containerInstanceArns[*]'
   }
 
-main
+main $@
