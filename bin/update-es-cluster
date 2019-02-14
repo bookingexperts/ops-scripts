@@ -1,0 +1,29 @@
+#!/bin/bash
+source "$(dirname $(readlink $0))/aws-helpers.sh"
+
+asg=ElasticSearch
+instance=$(ec2-instances ecs | head -n1)
+
+main() {
+  if confirm "WARNING! UNTESTED! Are you sure you want to proceed?"; then
+    for instance in $(asg_running_instance_ids $asg); do
+      detach_and_replace $instance $asg \
+        && terminate $instance \
+        && wait_until_healthy
+    done
+  fi
+}
+
+wait_until_healthy() {
+  health=$(health_status)
+  while [ $health != "100.0%" ]; do
+    printf "\rWaiting for cluster to rebuild... ${health}"
+  done
+  echo "\a"
+}
+
+health_status() {
+  echo $(ssh ${instance} -- curl http://elasticsearch.be.internal:9200/_cat/health --silent) | awk '{print $NF}'
+}
+
+#main
