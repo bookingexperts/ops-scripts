@@ -6,11 +6,8 @@ RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 ENV RAILS_ENV='production' \
-    RUBY_GC_HEAP_INIT_SLOTS=500000  \
-    RUBY_GC_HEAP_FREE_SLOTS=500000  \
-    RUBY_GC_HEAP_GROWTH_FACTOR=1.25 \
-    RUBY_GC_MALLOC_LIMIT=64000000   \
-    RUBY_GC_OLDMALLOC_LIMIT=64000000
+    BUNDLE_GITHUB__HTTPS=true
+
 ENTRYPOINT ["bundle", "exec"]
 CMD ["web-start"]
 
@@ -31,7 +28,28 @@ RUN set -ex \
     ruby-bundler \
     ruby-full \
     tzdata \
-    yaml
+    yaml \
+ # install Build tools
+ && apk add --update --upgrade --no-cache --virtual .build-deps \
+    postgresql-dev \
+    build-base \
+    ca-certificates \
+    wget \
+    zlib-dev \
+ # Build PGRepack
+ && update-ca-certificates \
+ && wget https://api.pgxn.org/dist/pg_repack/1.4.3/pg_repack-1.4.3.zip \
+ && unzip pg_repack-1.4.3.zip \
+ && cd pg_repack-1.4.3 \
+ && make install \
+ # Cleanup
+ && cd .. \
+ && apk del .build-deps \
+ && rm -rf \
+    /root/.gem \
+    /root/.bundle \
+    ./vendor/bundle/ruby/*/cache \
+    ./pg_repack-*
 
 ARG revision
 
