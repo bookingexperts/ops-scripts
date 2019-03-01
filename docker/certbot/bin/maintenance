@@ -1,0 +1,4 @@
+#!/bin/sh
+be-certbot renew
+be-certbot backup
+be-certbot clean

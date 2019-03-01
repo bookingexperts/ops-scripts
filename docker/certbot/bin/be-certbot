@@ -33,6 +33,12 @@ function main() {
     reload|reload-nginx)
       validate_config && touch ${nginx_dir}/updated
       ;;
+    clean|cleanup)
+      clean
+      ;;
+    backup)
+      backup
+      ;;
     help|*)
       usage
       ;;
@@ -40,12 +46,17 @@ function main() {
 }
 
 function usage() {
-  echo "Usage: $0 [renew|setup]"
-  echo "       $0 add domain"
-  echo "       $0 add wildcard"
-  echo "       $0 validate[-nginx]"
-  echo "       $0 reload[-nginx]"
-  echo "Default command: renew"
+  echo "Usage: $0 [renew]           # Renew all certificates"
+  echo "       $0 add domain        # Request a certificate for given domain and configure it"
+  echo "       $0 validate[-nginx]  # Validate the nginx config"
+  echo "       $0 reload[-nginx]    # Validate & reload the nginx config if valid"
+  echo "       $0 clean[up]         # Remove expired certificates and backups older than 30 days"
+  echo "       $0 backup            # Backup all configs & certificates"
+  echo "       $0 setup             # Setup the LE account & generate DH params"
+  echo ""
+  echo "Note on wildcard domains:"
+  echo "Wildcard domains require DNS validation; this is _only_ supported for domains of which"
+  echo "the DNS zone is hosted by Route53."
 }
 
 function setup() {
@@ -99,6 +110,35 @@ function add_wildcard() {
   fi
 }
 
+function backup() {
+  timestamp=$(date +%s)
+  tar -czf /mnt/backups/nginx-${timestamp}.tar.gz $nginx_dir
+  tar -czf /mnt/backups/letsencrypt-${timestamp}.tar.gz $le_dir
+}
+
+function clean() {
+  # Remove expired certificates & config if dns no longer is valid
+  for cert in $(expired_certificates); do
+    if ! check_dns $cert; then
+      certbot delete --cert-name $cert
+      rm "${nginx_dir}/${cert}.conf"
+    fi
+  done
+
+  # Clean up old backups after 30 days
+  find /mnt/backups -mtime +30 -f file -name *.tar.gz -delete
+}
+
+
+function validate_config() {
+  nginx -t -c /etc/nginx/nginx.test-conf
+}
+
+# internal functions
+function expired_certificates() {
+  certbot certificates | grep '(INVALID: EXPIRED)' -B2 | grep 'Certificate Name' | awk '{print $3}'
+}
+
 function check_dns() {
   domain=$1
   naked=$2
@@ -128,10 +168,6 @@ function generate_nginx_config() {
   if [ "${naked_domain}" != '' ]; then
     eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\"" >> $config_file
   fi
-}
-
-function validate_config() {
-  nginx -t -c /etc/nginx/nginx.test-conf
 }
 
 function confirm() {

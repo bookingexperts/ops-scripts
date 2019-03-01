@@ -1,7 +1,0 @@
-#!/bin/sh
-timestamp=$(date +%s)
-tar -czf /mnt/backups/nginx-${timestamp}.tar.gz /mnt/nginx
-tar -czf /mnt/backups/letsencrypt-${timestamp}.tar.gz /mnt/letsencrypt
-
-# Clean up old backups after 30 days
-find /mnt/backups -mtime +30 -f file -name *.tar.gz -delete
