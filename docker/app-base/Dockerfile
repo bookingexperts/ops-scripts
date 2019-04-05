@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM ruby:alpine3.8
 
 LABEL maintainer "arthur@bookingexperts.nl"
 
@@ -14,19 +14,15 @@ CMD ["web-start"]
 RUN set -ex \
  # Install dependecies
  && apk add --update --upgrade --no-cache --virtual .run-deps \
-    dumb-init \
     file \
     git \
     imagemagick \
     less \
     libpq \
-    libstdc++ \
     libsodium \
     nginx \
     nodejs \
     postgresql-client \
-    ruby-bundler \
-    ruby-full \
     tzdata \
     yaml \
  # install Build tools
