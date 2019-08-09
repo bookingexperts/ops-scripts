@@ -26,4 +26,4 @@ COPY nginx   /etc/nginx/
 COPY bin     /usr/local/bin/
 
 EXPOSE 80
-ENTRYPOINT /usr/local/bin/docker-entrypoint.sh
+CMD /usr/local/bin/docker-entrypoint.sh

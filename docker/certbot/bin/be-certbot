@@ -98,11 +98,11 @@ function add_wildcard() {
   naked_domain=$(echo $domain | sed -e 's/*\.//g')
   config_file="${nginx_dir}/${domain}.conf"
 
-  if confirm "Request certificate for $domain and ${naked_domain}?"; then
+  if ! is_tty || confirm "Request certificate for $domain and ${naked_domain}?"; then
     request_certificate "${domain},${naked_domain}" --dns
   fi
 
-  if confirm "Rewrite config?"; then
+  if ! is_tty || confirm "Rewrite config?"; then
     domain=".${naked_domain}"
     name=$naked_domain
     eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > "${nginx_dir}/${name}.conf"
@@ -198,4 +198,9 @@ function die() {
   fi
   exit $exitcode
 }
+
+function is_tty() {
+  tty > /dev/null && true
+}
+
 main "$@"
