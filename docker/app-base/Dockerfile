@@ -53,7 +53,8 @@ COPY nginx.conf /etc/nginx/
 ADD bin /usr/local/bin
 
 RUN set -ex \
-   && mkdir -p tmp config public /mnt/shared/assets \
+   && mkdir -p tmp config public /mnt/shared/assets /mnt/shared/packs \
    && ln -s database.deploy.yml config/database.yml \
    && ln -s /mnt/shared/assets  public/assets \
+   && ln -s /mnt/shared/packs  public/packs \
    && cp /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
