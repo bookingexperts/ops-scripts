@@ -1,0 +1,113 @@
+#!/bin/sh
+
+work_dir=/root
+repo_dir="${work_dir}/terraform"
+conf_dir="${repo_dir}/testing-environments"
+tmpl_dir="${conf_dir}/templates"
+
+function main() {
+  cd $work_dir
+
+  app=$2 # i.e.bookingexperts
+  name=$3 # 123-some-branch
+
+  case $1 in
+    apply)
+      pull && apply
+      ;;
+    add)
+      pull && add && push && apply "${app}-${name}"
+      ;;
+    del|remove)
+      pull && destroy "${app}-${name}" && del && push
+      ;;
+    terraform|git|sleep)
+      # Directly call sleep, terraform or git, passing on all further arguments
+      $@
+      ;;
+    help|*)
+      usage
+      ;;
+  esac
+}
+
+function usage() {
+  echo "Usage: $0 apply                       # Pull updates & apply changes."
+  echo "       $0 add APPLICATION NAME        # Add an environment NAME for APPLICATION."
+  echo "                                      # Example: $0 add 123-test bookingexperts"
+  echo "       $0 del|remove APPLICATION NAME # Remove environment."
+  echo ""
+  echo "Both adding & removing environments will commit and push the updated config; and then apply the changes."
+}
+
+function add() {
+  template=${tmpl_dir}/${app}.tf.tmpl
+  config=${conf_dir}/${app}-${name}.tf
+
+  if [ ! -f $template ]; then
+    die "Cloud not find template for ${app} at ${template}."
+  fi
+
+  if [ -f $config ]; then
+    die "Config already exists for ${app}-${name}."
+  fi
+
+  eval "echo \"$(cat ${template})\"" > "${config}"
+  git add "${config}" &&
+    git commit -m "Add ${name} environment for ${app}."
+}
+
+function del() {
+  config=${conf_dir}/${app}-${name}.tf
+
+  if [ ! -f $config ]; then
+    die "Config not found for ${app}-${name}."
+  fi
+
+  git rm "${config}" &&
+    git commit -m "Remove ${name} environment for ${app}."
+}
+
+# Git helpers
+function pull() {
+  git pull --rebase && git submodule update --init --recursive
+}
+
+function push() {
+  git push || git pull --rebase && git push
+}
+
+function git() {
+  /usr/bin/git -C $repo_dir "$@"
+}
+
+# TF helpers
+function apply() {
+  terraform init
+  if [ ! -z $1 ]; then
+    terraform apply -auto-approve -target module.$1
+  else
+    terraform apply -auto-approve
+  fi
+}
+
+function destroy() {
+  terraform destroy -auto-approve -target module.$1
+}
+
+function terraform() {
+  /bin/terraform "$@" -no-color $conf_dir
+}
+
+# Generic helpers
+function die() {
+  echo "ERROR: ${1}"
+  if [ ! -z "$2" ]; then
+    exitcode=$2
+  else
+    exitcode=1
+  fi
+  exit $exitcode
+}
+
+main "$@"
