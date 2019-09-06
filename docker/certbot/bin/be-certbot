@@ -27,6 +27,9 @@ function main() {
           ;;
       esac
       ;;
+    remove)
+      delete $2
+      ;;
     validate|validate-nginx)
       validate_config
       ;;
@@ -51,6 +54,7 @@ function usage() {
   echo "       $0 validate[-nginx]  # Validate the nginx config"
   echo "       $0 reload[-nginx]    # Validate & reload the nginx config if valid"
   echo "       $0 clean[up]         # Remove expired certificates and backups older than 30 days"
+  echo "       $0 remove domain     # Delete a certificate & remove its config"
   echo "       $0 backup            # Backup all configs & certificates"
   echo "       $0 setup             # Setup the LE account & generate DH params"
   echo ""
@@ -129,6 +133,11 @@ function clean() {
   find /mnt/backups -mtime +30 -type f -name *.tar.gz -delete
 }
 
+function delete() {
+  cert=$1
+  certbot delete --cert-name $cert
+  rm "${nginx_dir}/${cert}.conf"
+}
 
 function validate_config() {
   nginx -t -c /etc/nginx/nginx.test-conf
