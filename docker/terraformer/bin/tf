@@ -21,6 +21,9 @@ function main() {
     del|remove)
       pull && destroy "${app}-${name}" && del && push
       ;;
+    status|plan)
+      status
+      ;;
     terraform|git|sleep)
       # Directly call sleep, terraform or git, passing on all further arguments
       $@
@@ -32,10 +35,11 @@ function main() {
 }
 
 function usage() {
-  echo "Usage: $0 apply                       # Pull updates & apply changes."
-  echo "       $0 add APPLICATION NAME        # Add an environment NAME for APPLICATION."
-  echo "                                      # Example: $0 add 123-test bookingexperts"
-  echo "       $0 del|remove APPLICATION NAME # Remove environment."
+  echo "Usage: $0 apply                         # Pull updates & apply changes."
+  echo "       $0 add APPLICATION NAME          # Add an environment."
+  echo "                                        # Example: $0 add bookingexperts 123-test"
+  echo "       $0 del|remove APPLICATION NAME   # Remove environment."
+  echo "       $0 status|plan APPLICATION NAME  # Show the status (i.e terraform plan) of an environment."
   echo ""
   echo "Both adding & removing environments will commit and push the updated config; and then apply the changes."
 }
@@ -49,7 +53,7 @@ function add() {
   fi
 
   if [ -f $config ]; then
-    die "Config already exists for ${app}-${name}."
+    die "Config already exists for ${app}-${name}." 64
   fi
 
   eval "echo \"$(cat ${template})\"" > "${config}"
@@ -61,11 +65,20 @@ function del() {
   config=${conf_dir}/${app}-${name}.tf
 
   if [ ! -f $config ]; then
-    die "Config not found for ${app}-${name}."
+    die "Config not found for ${app}-${name}." 64
   fi
 
   git rm "${config}" &&
     git commit -m "Remove ${name} environment for ${app}."
+}
+
+function status() {
+  config=${conf_dir}/${app}-${name}.tf
+  if [ ! -f $config ]; then
+    die "Config not found for ${app}-${name}." 64
+  fi
+
+  terraform plan -target "module.${app}-${name}" -detailed-exitcode
 }
 
 # Git helpers
