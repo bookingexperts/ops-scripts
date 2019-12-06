@@ -1,0 +1,83 @@
+#!/bin/sh
+
+function main() {
+  case $1 in
+    import)
+      import "${@:2}"
+      ;;
+    print)
+      echo "$( get_zone $2 | alias_records )"
+      ;;
+    del|delete)
+      check_ns $2 && cli53 delete $2 --purge
+      ;;
+    help|*)
+      usage
+      ;;
+  esac
+}
+
+function usage() {
+  echo "Usage: $0 import DOMAIN [DOMAIN ...] # Import zone file for all domains & configure aliasses."
+  echo "                                     # Creates zone if nescesary, overrides any changes in AWS."
+  echo "       $0 print DOMAIN               # Print zone as it would be imported."
+  echo "       $0 del[ete] DOMAIN            # Delete zone if is still hosted on expertwebdesign-dns.nl"
+}
+
+function import() {
+  for domain in "$@"; do
+    # Check if zone is available
+    check_ns $domain
+    zone_id=$(find_or_create_zone $domain)
+    set_ns_and_soa $zone_id || fail 'Failed to set NS & SOA records'
+    ( get_zone $domain | alias_records | replace_zone $zone_id ) || fail 'Failed to import zone'
+  done
+}
+
+function check_ns() {
+  ( dig ns $1 | grep -q 'ns1.expertwebdesign-dns.nl.' ) || fail 'DNS zone not hosted on ns1.expertwebdesign-dns.nl.'
+}
+
+function get_zone() {
+  dig AXFR @ns1.expertwebdesign-dns.nl $1
+}
+
+function replace_zone() {
+  cli53 import --file - --replace $1
+}
+
+function get_zone_id() {
+  cli53 list | grep $1 | awk '{print $1}'
+}
+
+function find_or_create_zone() {
+  domain=$1
+  zone_id=$( get_zone_id $domain )
+  if [ -z "$zone_id" ]; then
+    ds=$( cli53 dslist | tail -n1 | awk '{print $3}' ) # We hebben er maar 1
+    ( cli53 create $domain --comment 'Imported from expertwebdesign-dns.nl' --delegation-set-id $ds 1>&2  ) || fail 'Could not create Zone.'
+    zone_id=$( get_zone_id $domain )
+  fi
+  echo $zone_id
+}
+
+function fail() {
+  echo $@
+  exit 1
+}
+
+function set_ns_and_soa() {
+  cli53 rrcreate --replace $1 \
+    "@ NS ns1.bookingexperts.nl." \
+    "@ NS ns2.bookingexperts.nl." \
+    "@ NS ns3.bookingexperts.nl." \
+    "@ NS ns4.bookingexperts.nl." \
+    "@ SOA ns1.bookingexperts.nl. admin.bookingexperts.nl. 1 7200 900 1209600 60"
+}
+
+function alias_records() {
+  sed -E 's/IN	A	52.58.34.119/AWS	ALIAS	A external-79c0d84762852697.elb.eu-central-1.amazonaws.com. Z3F0SRJ5LGBH90 true/
+          s/IN	CNAME	(\w+\.lb\.cms|lb|cms).bookingexperts.nl./AWS	ALIAS	A external-79c0d84762852697.elb.eu-central-1.amazonaws.com. Z3F0SRJ5LGBH90 true/'
+}
+
+main $@

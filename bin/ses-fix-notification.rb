@@ -17,18 +17,13 @@ def main
     else
       puts "Setting SNS topics for #{identity}..."
 
-      %w(Bounce Complaint).each do |type|
+      %w(Bounce Complaint Delivery).each do |type|
         ses.set_identity_notification_topic({
           identity: identity,
           notification_type: type,
-          sns_topic: sns_topic_arn
+          sns_topic: nil
         })
       end
-      ses.set_identity_notification_topic({
-        identity: identity,
-        notification_type: 'Delivery',
-        sns_topic: nil
-      })
       ses.set_identity_feedback_forwarding_enabled({
         identity: identity,
         forwarding_enabled: false
