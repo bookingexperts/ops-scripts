@@ -1,11 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 admin_email='admin@bookingexperts.nl'
 webroot='/usr/share/nginx/html'
 nginx_dir=/mnt/nginx
 le_dir=/mnt/letsencrypt
 redirector_ip='52.58.34.119'
 
-if [ ! -z ${STAGING} ]; then
+if [ -n "${STAGING}" ]; then
   staging="--staging"
 fi
 
@@ -18,14 +18,7 @@ function main() {
       setup
       ;;
     add)
-      case $2 in
-        \*.*)
-          add_wildcard $2
-          ;;
-        *)
-          add $2
-          ;;
-      esac
+      add $2
       ;;
     remove)
       delete $2
@@ -34,7 +27,7 @@ function main() {
       validate_config
       ;;
     reload|reload-nginx)
-      validate_config && touch ${nginx_dir}/updated
+      validate_config && reload_config
       ;;
     clean|cleanup)
       clean
@@ -50,7 +43,7 @@ function main() {
 
 function usage() {
   echo "Usage: $0 [renew]           # Renew all certificates"
-  echo "       $0 add domain        # Request a certificate for given domain and configure it"
+  echo "       $0 add domain        # Request a certificate for given domain and configure it."
   echo "       $0 validate[-nginx]  # Validate the nginx config"
   echo "       $0 reload[-nginx]    # Validate & reload the nginx config if valid"
   echo "       $0 clean[up]         # Remove expired certificates and backups older than 30 days"
@@ -80,37 +73,15 @@ function renew() {
 
 function add() {
   domain=$1
-  config_file="${nginx_dir}/${domain}.conf"
+  naked_domain=$( echo $domain | sed -E 's/^(www|\*)\.//g' )
+  cert_name=${domain/\*.}
+  config_file="${nginx_dir}/${cert_name}.conf"
 
   if [ ! -f $config_file ]; then
-    case $domain in
-      www.*)
-        naked_domain=$(echo $domain | sed -e 's/www\.//g')
-        ;;
-    esac
-
-       check_dns $domain "${naked_domain}"                              || die "DNS check failed" 12 \
-    && request_certificate $(strip_commas "${domain},${naked_domain}")  || die "Request certificate failed" \
-    && generate_nginx_config $domain "${naked_domain}"                  || die "Generating vhost config failed" \
-    && validate_config                                                  || die "Nginx config invalid" 9 \
-    && touch ${nginx_dir}/updated
-  fi
-}
-
-function add_wildcard() {
-  domain=$1
-  naked_domain=$(echo $domain | sed -e 's/*\.//g')
-  config_file="${nginx_dir}/${domain}.conf"
-
-  if ! is_tty || confirm "Request certificate for $domain and ${naked_domain}?"; then
-    request_certificate "${domain},${naked_domain}" --dns
-  fi
-
-  if ! is_tty || confirm "Rewrite config?"; then
-    domain=".${naked_domain}"
-    name=$naked_domain
-    eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > "${nginx_dir}/${name}.conf"
-    validate_config && touch ${nginx_dir}/updated
+    request_certificate   || die "Request certificate failed"
+    generate_nginx_config || die "Generating vhost config failed"
+    validate_config       || die "Nginx config invalid" 9
+    reload_config
   fi
 }
 
@@ -124,8 +95,7 @@ function clean() {
   # Remove expired certificates & config if dns no longer is valid
   for cert in $(expired_certificates); do
     if ! check_dns $cert; then
-      certbot delete --cert-name $cert
-      rm "${nginx_dir}/${cert}.conf"
+      delete $cert
     fi
   done
 
@@ -143,41 +113,80 @@ function validate_config() {
   nginx -t -c /etc/nginx/nginx.test-conf
 }
 
+function reload_config() {
+  touch ${nginx_dir}/updated
+}
+
 # internal functions
 function expired_certificates() {
   certbot certificates | grep '(INVALID: EXPIRED)' -B2 | grep 'Certificate Name' | awk '{print $3}'
 }
 
 function check_dns() {
-  domain=$1
-  naked=$2
-  if [ -z $naked ]; then
-    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' || [ "$(dig $domain +short)" = $redirector_ip ]
+  if should_redirect; then
+    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' && [ "$(dig $naked_domain +short)" = $redirector_ip ]
   else
-    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' && [ "$(dig $naked  +short)" = $redirector_ip ]
+    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' || [ "$(dig $domain +short)" = $redirector_ip ]
   fi
+}
+
+# Lookup for a hosted zone based on the domain name & recurse (shifting domain name parts) until found; then verify delegation
+# verify it is delegated correctly by checking the expected & actual SOA record
+function has_route53_zone() {
+  local dns_name=$1
+  if [ -n "${dns_name}" ]; then
+      local zone_id=$(
+        aws --output text route53 list-hosted-zones-by-name --dns-name=$dns_name --max-items=1 |
+        egrep "/hostedzone/[A-Z0-9]+\t$dns_name" |
+        awk '{print $3}'
+      )
+      if [ -z "${zone_id}" ]; then
+        has_route53_zone $( echo $dns_name | sed -E 's/^[^.]+\.?//g' )
+      else
+        zone_delegated $dns_name $zone_id
+      fi
+  else
+    false
+  fi
+}
+
+function zone_delegated() {
+  dig +nocmd +noall +answer $1 SOA | grep -q "$(aws route53 test-dns-answer --hosted-zone-id=$2 --record-name $1 --record-type SOA | jq -r '.RecordData[0]')"
 }
 
 function request_certificate() {
-  if [ $2 == "--dns" ]; then
+  if has_route53_zone $domain; then
     validation_options="--dns-route53"
-  else
+  elif check_dns; then
     validation_options="--webroot --webroot-path $webroot"
+  else
+    die "DNS checks failed & zone not hosted on Route53. Cannot request certificate." 12
   fi
-  certbot certonly ${staging} ${validation_options} --rsa-key-size 4096 --non-interactive --expand --keep-until-expiring --domains $1
+
+  certbot certonly ${staging} ${validation_options} \
+    --rsa-key-size 4096 --non-interactive --expand --keep-until-expiring \
+    --cert-name ${cert_name} \
+    $(domain_arguments $domain $naked_domain)
 }
 
+# Create vhost config for the domain & a www redirect if required
 function generate_nginx_config() {
-  domain=$1
-  name=$domain
-  naked_domain=$2
-  config_file="${nginx_dir}/${domain}.conf"
-
   eval "echo \"$(cat /etc/nginx/vhost.conf.template)\"" > $config_file
-  if [ "${naked_domain}" != '' ]; then
+  if should_redirect; then
     eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\"" >> $config_file
   fi
 }
+
+function should_redirect() {
+  echo $domain | egrep -q '^www\.'
+}
+
+# Take any number of domains as arguments, outputs uniq domains prefix with -d fo use as cerbot add arguments
+function domain_arguments() {
+  args=( "$@" )
+  printf "%s\n" "${args[@]}" | sort -u | awk '{print "-d "$0}'
+}
+
 
 function confirm() {
   echo -n "$@ "
@@ -194,13 +203,9 @@ function confirm() {
   return 1
 }
 
-strip_commas() {
- echo $1 | sed -e 's/^,*//g' | sed -e 's/,*$//g'
-}
-
 function die() {
   echo "ERROR: ${1}"
-  if [ ! -z "$2" ]; then
+  if [ -n "$2" ]; then
     exitcode=$2
   else
     exitcode=1
@@ -211,5 +216,30 @@ function die() {
 function is_tty() {
   tty > /dev/null && true
 }
+
+# Dry-run mode, just echo all the things!
+if [ -n "${TEST}" ]; then
+  function generate_nginx_config() {
+    eval "echo \"$(cat /etc/nginx/vhost.conf.template)\""
+    if should_redirect; then
+      eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\""
+    fi
+  }
+  function touch() {
+    echo "touch ${@}"
+  }
+  function nginx() {
+    echo "nginx ${@}"
+  }
+  function tar() {
+    echo "tar ${@}"
+  }
+  function rm() {
+    echo "rm ${@}"
+  }
+  function certbot() {
+    echo "certbot ${@}"
+  }
+fi
 
 main "$@"

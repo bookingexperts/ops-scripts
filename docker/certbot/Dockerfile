@@ -1,4 +1,4 @@
-FROM alpine:3.9
+FROM alpine
 
 LABEL maintainer "arthur@bookingexperts.nl"
 
@@ -9,18 +9,20 @@ RUN set -ex \
     libffi-dev \
     openssl-dev \
  && apk add --update --upgrade --no-cache \
+    bash \
     bind-tools \
-    certbot \
     curl \
+    jq \
     nginx \
     nginx-mod-http-lua \
     openssl \
+    python3 \
     vim \
- && pip3 install certbot-dns-route53 \
+ && pip3 install certbot certbot-dns-route53 awscli \
  && mkdir -p /usr/share/nginx/html \
  && rm -rf /etc/letsencrypt \
  && ln -nsf /mnt/letsencrypt /etc/letsencrypt \
- && apk del --virtual .build-deps
+ && apk del .build-deps
 
 COPY nginx   /etc/nginx/
 COPY bin     /usr/local/bin/
