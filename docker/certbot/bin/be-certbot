@@ -12,7 +12,11 @@ fi
 function main() {
   case $1 in
     renew|'')
-      renew
+      if [ -n "${2}" ]; then
+        renew $2
+      else
+        renew_all
+      fi
       ;;
     setup)
       setup
@@ -43,6 +47,7 @@ function main() {
 
 function usage() {
   echo "Usage: $0 [renew]           # Renew all certificates"
+  echo "       $0 renew domain      # Force renewal for given domain."
   echo "       $0 add domain        # Request a certificate for given domain and configure it."
   echo "       $0 validate[-nginx]  # Validate the nginx config"
   echo "       $0 reload[-nginx]    # Validate & reload the nginx config if valid"
@@ -68,6 +73,19 @@ function setup() {
 }
 
 function renew() {
+  domain=$1
+  cert_name=${domain/\*.}
+
+  # Once the domain is routed to us, we want to switch to http-01
+  if check_dns; then
+    validation_options="--webroot --webroot-path $webroot"
+  fi
+
+  certbot renew ${staging} ${validation_options}\
+    --cert-name ${cert_name} --post-hook="touch ${nginx_dir}/updated" --force-renewal
+}
+
+function renew_all() {
   certbot renew ${staging} --post-hook="touch ${nginx_dir}/updated"
 }
 
@@ -123,10 +141,13 @@ function expired_certificates() {
 }
 
 function check_dns() {
+  result="$(dig +short $domain | egrep '^[0-9.]*$' | sort)"
+  lb_ips="$(dig +short lb.bookingexperts.nl | sort)"
+
   if should_redirect; then
-    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' && [ "$(dig $naked_domain +short)" = $redirector_ip ]
+    [ "$result" = "$lb_ips" ] && [ "$(dig $naked_domain +short)" = $redirector_ip ]
   else
-    dig $domain +short | egrep -q '(lb|cms|lb\.cms|support)\.bookingexperts.nl' || [ "$(dig $domain +short)" = $redirector_ip ]
+    [ "$result" = "$lb_ips" ] || [ "$(dig $domain +short)" = $redirector_ip ]
   fi
 }
 
@@ -155,10 +176,11 @@ function zone_delegated() {
 }
 
 function request_certificate() {
-  if has_route53_zone $domain; then
-    validation_options="--dns-route53"
-  elif check_dns; then
+  # Prefer http-01 over route53, it is much quicker.
+  if check_dns && ! is_wildcard; then
     validation_options="--webroot --webroot-path $webroot"
+  elif has_route53_zone $domain; then
+    validation_options="--dns-route53"
   else
     die "DNS checks failed & zone not hosted on Route53. Cannot request certificate." 12
   fi
@@ -175,6 +197,10 @@ function generate_nginx_config() {
   if should_redirect; then
     eval "echo \"$(cat /etc/nginx/www-redir.conf.template)\"" >> $config_file
   fi
+}
+
+function is_wildcard() {
+  echo $domain | egrep -q '^\*\.'
 }
 
 function should_redirect() {

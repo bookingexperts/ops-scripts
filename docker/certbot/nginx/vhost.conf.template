@@ -7,7 +7,7 @@ server {
   ssl_trusted_certificate /etc/letsencrypt/live/${cert_name}/chain.pem;
 
   # Legacy TLS support
-  # ssl_ciphers   EECDH+AEAD:EDH+AEAD:EECDH+AES256:EDH+AES256;
+  # ssl_ciphers   EECDH+AESGCM:EDH+AESGCM:EECDH+AES256:EDH+AES256;
 
   location / {
     proxy_pass http://lb.ecs.be.internal;
