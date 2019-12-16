@@ -6,11 +6,8 @@ server {
   ssl_certificate_key /etc/letsencrypt/live/${cert_name}/privkey.pem;
   ssl_trusted_certificate /etc/letsencrypt/live/${cert_name}/chain.pem;
 
-  # Legacy TLS support
-  # ssl_ciphers   EECDH+AESGCM:EDH+AESGCM:EECDH+AES256:EDH+AES256;
-
   location / {
-    proxy_pass http://lb.ecs.be.internal;
+    proxy_pass http://internal;
   }
 
   include /etc/nginx/error_pages.conf;

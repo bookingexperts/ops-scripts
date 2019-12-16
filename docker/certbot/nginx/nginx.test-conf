@@ -22,5 +22,17 @@ http {
       '' close;
     }
 
+    upstream internal {
+      server lb.ecs.be.internal max_fails=0;
+    }
+
+    upstream planboard-staging {
+      server lb.ecs.be.internal:89 max_fails=0;
+    }
+
+    upstream planboard-production {
+      server lb.ecs.be.internal:90 max_fails=0;
+    }
+
     include /mnt/nginx/*.conf;
 }

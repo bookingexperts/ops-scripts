@@ -23,9 +23,6 @@ services:
   terraformer:
     image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/terraformer
     build: ./terraformer
-  sentinel:
-    image: 762732311162.dkr.ecr.eu-central-1.amazonaws.com/sentinel
-    build: ./sentinel
 volumes:
   certdata:
   elastic:
