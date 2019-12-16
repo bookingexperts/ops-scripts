@@ -3,7 +3,7 @@ FROM hashicorp/terraform
 LABEL maintainer "arthur@bookingexperts.nl"
 
 RUN set -ex \
-  && apk --update add python3 \
+  && apk --update add python3 jq \
   && apk --update add --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base \
   && pip3 install --no-cache --upgrade \
      PyYAML \
@@ -12,7 +12,6 @@ RUN set -ex \
      boto3 \
      cfn-flip \
      cfn-lint \
-     jq \
      requests \
      sceptre \
   && apk del --purge .build-dependencies \
