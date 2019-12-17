@@ -3,7 +3,7 @@ FROM alpine
 LABEL maintainer "arthur@bookingexperts.nl"
 
 RUN set -ex \
- && apk add --update --upgrade --no-cache nginx \
+ && apk add --update --upgrade --no-cache nginx curl vim bind-tools \
  && rm -rf /etc/nginx/conf.d /etc/letsencrypt   \
  && ln -nsf /mnt/nginx /etc/nginx/conf.d        \
  && ln -nsf /mnt/letsencrypt /etc/letsencrypt
