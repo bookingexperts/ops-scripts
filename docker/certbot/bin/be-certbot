@@ -145,7 +145,7 @@ function check_dns() {
   lb_ips="$(dig +short lb.bookingexperts.nl | sort)"
 
   if should_redirect; then
-    [ "$result" = "$lb_ips" ] && [ "$(dig $naked_domain +short)" = $redirector_ip ]
+    [ "$result" = "$lb_ips" -o "$result" = $redirector_ip ] && [ "$(dig $naked_domain +short)" = $redirector_ip ]
   else
     [ "$result" = "$lb_ips" ] || [ "$(dig $domain +short)" = $redirector_ip ]
   fi
