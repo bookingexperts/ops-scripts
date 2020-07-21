@@ -3,17 +3,15 @@ FROM hashicorp/terraform
 LABEL maintainer "arthur@bookingexperts.nl"
 
 RUN set -ex \
-  && apk --update add python3 jq \
+  && apk --update add python3 jq py3-pip \
   && apk --update add --virtual .build-dependencies python3-dev libffi-dev openssl-dev build-base \
-  && pip3 install --no-cache --upgrade \
+  && pip install --no-cache --upgrade \
      PyYAML \
      awscli \
-     awsebcli \
      boto3 \
      cfn-flip \
      cfn-lint \
      requests \
-     sceptre \
   && apk del --purge .build-dependencies \
   && rm -rf /var/cache/apk/* /tmp/*
 
